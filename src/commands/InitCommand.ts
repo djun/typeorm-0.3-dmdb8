@@ -224,11 +224,11 @@ export class InitCommand implements yargs.CommandModule {
                 break
             case "oracle":
                 dbSettings = `type: "oracle",
-host: "localhost",
-username: "system",
-password: "oracle",
-port: 1521,
-sid: "xe.oracle.docker",`
+    host: "localhost",
+    "username": "system",
+    "password": "system",
+    "database": "system",
+    port: 5236,`
                 break
             case "mongodb":
                 dbSettings = `type: "mongodb",
@@ -720,7 +720,8 @@ Steps to run this project:
                 packageJson.dependencies["better-sqlite3"] = "^7.0.0"
                 break
             case "oracle":
-                packageJson.dependencies["oracledb"] = "^5.1.0"
+                // packageJson.dependencies["oracledb"] = "^5.1.0"
+		packageJson.dependencies["dmdb"] = "^1.0.10728";
                 break
             case "mssql":
                 packageJson.dependencies["mssql"] = "^9.1.1"

@@ -73,7 +73,8 @@ export class PlatformTools {
                  * oracle
                  */
                 case "oracledb":
-                    return require("oracledb")
+                    // return require("oracledb")
+                    return require("dmdb")
 
                 /**
                  * postgres
