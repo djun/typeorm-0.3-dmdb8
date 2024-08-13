@@ -38,7 +38,7 @@ TypeORM is highly influenced by other ORMs, such as [Hibernate](http://hibernate
 
 ## Features
 
--   2024-8-12开发备注：基于 TypeORM 0.3.20版本进行魔改，由于达梦8数据库兼容Oracle数据库，因此魔改思路为直接将原用于Oracle的驱动修改为达梦驱动（名称保持使用Oracle的名称），再将其中可能不兼容的地方进行调整优化；参考项目 https://github.com/li1125435097/typeorm-dmdb8 该项目基于 TypeORM 0.2版（与0.3版不兼容）
+-   2024-8-12开发备注：基于 TypeORM 0.3.20版本进行魔改，由于达梦8数据库兼容Oracle数据库，因此魔改思路为直接将原用于Oracle的驱动修改为达梦驱动（名称保持使用Oracle的名称），再将其中可能不兼容的地方进行调整优化；参考项目 https://github.com/li1125435097/typeorm-dmdb8 该项目基于 TypeORM 0.2版（与0.3版不兼容）；建议自行package后，将build/package/拷贝至自己项目下引入使用（引入方法：package.json中将typeorm一项修改指向"file:项目目录下的包路径"）
 -   Supports both [DataMapper](./docs/active-record-data-mapper.md#what-is-the-data-mapper-pattern) and [ActiveRecord](./docs/active-record-data-mapper.md#what-is-the-active-record-pattern) (your choice).
 -   Entities and columns.
 -   Database-specific column types.

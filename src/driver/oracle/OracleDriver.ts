@@ -999,7 +999,7 @@ export class OracleDriver implements Driver {
      */
     protected loadDependencies(): void {
         try {
-            const oracle = this.options.driver || PlatformTools.load("dmdb")
+            const oracle = this.options.driver || PlatformTools.load("oracledb")
             this.oracle = oracle
         } catch (e) {
             throw new DriverPackageNotInstalledError("Oracle", "dmdb")
@@ -1024,54 +1024,83 @@ export class OracleDriver implements Driver {
             credentials,
             DriverUtils.buildDriverOptions(credentials),
         ) // todo: do it better way
+        
+        const { username, password, host, port, database} = credentials
+        const connectString = 
+        `dm://${username}:${password}@${host}:${port}
+        ?SCHEMA=${database}&loginEncrypt=false`
 
-        if (!credentials.connectString) {
-            let address = `(PROTOCOL=TCP)`
+        return new Promise((ok, fail) => {
+            this.oracle.createPool({
+                connectString,
+                schema: credentials.database,
+                database: credentials.database,
+                poolMin: 1,
+                poolMax: 20,
+                poolAlias: 'DMl12skd5fi8',
+            }, (err:Error, pool:any) => {
+                if (err){
+                    console.trace('dmdb connection fail,the connectUrl is: ', connectString);                    
+                    return fail(err);
+                }
+                // pool.getConnection((err:Error,cc:any) => {
+                //     if(err) console.trace('失败',err)
+                //     cc.execute('select * from area').then(({meta, rows}) => {
+                //         console.log('queryResult: ',meta,rows[0][7])
+                //     })
+                // })
+                console.log('\ndameng database connect success\n达梦数据库连接成功')
+                ok(pool);
+            });
+        });
 
-            if (credentials.host) {
-                address += `(HOST=${credentials.host})`
-            }
+        // if (!credentials.connectString) {
+        //     let address = `(PROTOCOL=TCP)`
 
-            if (credentials.port) {
-                address += `(PORT=${credentials.port})`
-            }
+        //     if (credentials.host) {
+        //         address += `(HOST=${credentials.host})`
+        //     }
 
-            let connectData = `(SERVER=DEDICATED)`
+        //     if (credentials.port) {
+        //         address += `(PORT=${credentials.port})`
+        //     }
 
-            if (credentials.sid) {
-                connectData += `(SID=${credentials.sid})`
-            }
+        //     let connectData = `(SERVER=DEDICATED)`
 
-            if (credentials.serviceName) {
-                connectData += `(SERVICE_NAME=${credentials.serviceName})`
-            }
+        //     if (credentials.sid) {
+        //         connectData += `(SID=${credentials.sid})`
+        //     }
 
-            const connectString = `(DESCRIPTION=(ADDRESS=${address})(CONNECT_DATA=${connectData}))`
-            Object.assign(credentials, { connectString })
-        }
+        //     if (credentials.serviceName) {
+        //         connectData += `(SERVICE_NAME=${credentials.serviceName})`
+        //     }
 
-        // build connection options for the driver
-        const connectionOptions = Object.assign(
-            {},
-            {
-                user: credentials.username,
-                password: credentials.password,
-                connectString: credentials.connectString,
-            },
-            {
-                poolMax: options.poolSize,
-            },
-            options.extra || {},
-        )
+        //     const connectString = `(DESCRIPTION=(ADDRESS=${address})(CONNECT_DATA=${connectData}))`
+        //     Object.assign(credentials, { connectString })
+        // }
 
-        // pooling is enabled either when its set explicitly to true,
-        // either when its not defined at all (e.g. enabled by default)
-        return new Promise<void>((ok, fail) => {
-            this.oracle.createPool(connectionOptions, (err: any, pool: any) => {
-                if (err) return fail(err)
-                ok(pool)
-            })
-        })
+        // // build connection options for the driver
+        // const connectionOptions = Object.assign(
+        //     {},
+        //     {
+        //         user: credentials.username,
+        //         password: credentials.password,
+        //         connectString: credentials.connectString,
+        //     },
+        //     {
+        //         poolMax: options.poolSize,
+        //     },
+        //     options.extra || {},
+        // )
+
+        // // pooling is enabled either when its set explicitly to true,
+        // // either when its not defined at all (e.g. enabled by default)
+        // return new Promise<void>((ok, fail) => {
+        //     this.oracle.createPool(connectionOptions, (err: any, pool: any) => {
+        //         if (err) return fail(err)
+        //         ok(pool)
+        //     })
+        // })
     }
 
     /**

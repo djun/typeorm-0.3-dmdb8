@@ -28,6 +28,7 @@ TypeORM 参考了很多其他优秀 ORM 的实现, 比如 [Hibernate](http://hib
 
 TypeORM 的一些特性:
 
+-   2024-8-12开发备注：基于 TypeORM 0.3.20版本进行魔改，由于达梦8数据库兼容Oracle数据库，因此魔改思路为直接将原用于Oracle的驱动修改为达梦驱动（名称保持使用Oracle的名称），再将其中可能不兼容的地方进行调整优化；参考项目 https://github.com/li1125435097/typeorm-dmdb8 该项目基于 TypeORM 0.2版（与0.3版不兼容）；建议自行package后，将build/package/拷贝至自己项目下引入使用（引入方法：package.json中将typeorm一项修改指向"file:项目目录下的包路径"）
 - 同时支持 [DataMapper](./docs/zh_CN/active-record-data-mapper.md#什么是data-mapper模式) 和 [ActiveRecord](./docs/zh_CN/active-record-data-mapper.md#什么是active-record模式) (随你选择)
 - 实体和列
 - 数据库特性列类型
