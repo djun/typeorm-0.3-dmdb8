@@ -30,6 +30,9 @@ import { BroadcasterResult } from "../../subscriber/BroadcasterResult"
  * Runs queries on a single oracle database connection.
  */
 export class OracleQueryRunner extends BaseQueryRunner implements QueryRunner {
+
+    private log = (mark:any, txt:any) => (process.env.DMDB_LOG || '1').toLowerCase() === 'true' && console.log(new Date().toLocaleString(),' [INFO] ',mark,' ',txt)
+
     // -------------------------------------------------------------------------
     // Public Implemented Properties
     // -------------------------------------------------------------------------
@@ -199,6 +202,13 @@ export class OracleQueryRunner extends BaseQueryRunner implements QueryRunner {
     ): Promise<any> {
         if (this.isReleased) throw new QueryRunnerAlreadyReleasedError()
 
+        // hook
+        const hookData = await this.queryHook(query, parameters)
+        if(hookData){
+            query = hookData.query
+            parameters = hookData.parameters
+        }
+
         const databaseConnection = await this.connect()
         const broadcasterResult = new BroadcasterResult()
 
@@ -286,6 +296,12 @@ export class OracleQueryRunner extends BaseQueryRunner implements QueryRunner {
                 return result.raw
             }
         } catch (err) {
+            const defendResult = await this.queryDefend(query, parameters, err)
+            if (defendResult){
+                this.log('\ntypeorm-dmdb8 [info] trigger DmdbQueryRunner defend: ',{query,parameters})
+                return defendResult
+            }
+
             this.driver.connection.logger.logQueryError(
                 err,
                 query,
@@ -306,6 +322,75 @@ export class OracleQueryRunner extends BaseQueryRunner implements QueryRunner {
         } finally {
             await broadcasterResult.wait()
         }
+    }
+
+    async queryHook(query: string, parameters?: any[]){
+        if (!parameters) return false
+        let isReturn = false
+        this.log({query,parameters},'dddddddddddddddddmmmmmmmmmmmmmmm');
+
+        // 参数null值处理
+        const templateChar = query.match(/(\:\d* )|\?/g) || []
+        templateChar.map((v: any,i:number) => {
+            if (parameters[i] === null){
+                query = query.replace(v,'null ')
+                parameters.splice(i,1)
+            }
+            this.log('typeorm-dmdb8 [info] queryHook ',`null替换 ${query}`)
+        })
+
+        // 统计count处理
+        query = query.replace(' as count ',' "count" ')
+
+        // 去除别名引号
+        query = query.replace(/"[a-zA-Z]"/g, alias => {
+            this.log('typeorm-dmdb8 [info] queryHook ',`别名替换 ${alias} -> ${alias.slice(1,-1)}`)
+            isReturn = true
+            return alias.slice(1,-1)
+        })
+
+        // 反撇号转换
+        if (query.match('`')){
+            query = query.replace(/`/g,'"')
+            isReturn = true
+        }
+
+        // in语法处理
+        const matchin = query.match(/in\(:\d*\)/g)
+        if (matchin){
+            const oldQuery = query
+            matchin.map((v: any) => {
+                query = query.replace(v.slice(3, -1), parameters[v.slice(4,-1) - 1])
+                parameters.splice(v.slice(4,-1) - 1, 1)
+            })
+            this.log('typeorm-dmdb8 [info] queryHook ',`in替换 ${oldQuery} -> ${query}}`)
+            return {query, parameters}
+        }
+        
+        if (isReturn) return { query: query, parameters: parameters };
+        return false
+    }
+
+    async queryDefend(query: string, parameters: any[]|undefined, err:any) {
+        const errCodeMap: any = {"-2124":'表已存在',"-2140":'索引已存在'}      // 达梦错误码
+
+        // sql数据库版本处理
+        if (query === 'SELECT VERSION() AS version'){
+            const version = await this.query("SELECT * FROM v$version;").catch(err => {return false})
+            this.log('queryDefend','typeorm-dmdb8 [info] queryDefend 数据库版本语法纠正')
+            return [{version:version[1].BANNER}]
+        }
+        // 删除主键索引处理
+        else if (query.startsWith('DROP INDEX "INDEX') || query.startsWith('CREATE UNIQUE INDEX "INDEX')){
+            this.log('queryDefend','typeorm-dmdb8 [info] queryDefend 索引删除或新建纠正 ')
+            return []
+        }
+        // 达梦数据库错误码处理
+        else if (errCodeMap[err.errCode]){
+            this.log('queryDefend','typeorm-dmdb8 [info] queryDefend 达梦数据库错误码'+errCodeMap[err.errCode])
+            return []
+        }
+        else return false
     }
 
     /**
@@ -2174,6 +2259,11 @@ export class OracleQueryRunner extends BaseQueryRunner implements QueryRunner {
         tableOrName: Table | string,
         indexOrName: TableIndex | string,
     ): Promise<void> {
+        this.log('dropIndex','start')
+        // 达梦数据库主键保护
+        const indexObj: any = indexOrName
+        if (indexObj.name.startsWith('INDEX')) return console.error(indexObj.name+' 为主键索引，禁止删除！！！')
+
         const table = InstanceChecker.isTable(tableOrName)
             ? tableOrName
             : await this.getCachedTable(tableOrName)

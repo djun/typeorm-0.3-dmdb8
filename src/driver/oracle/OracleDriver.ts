@@ -104,6 +104,7 @@ export class OracleDriver implements Driver {
         "nvarchar2",
         "varchar2",
         "long",
+        "bigint",
         "raw",
         "long raw",
         "number",
@@ -113,6 +114,7 @@ export class OracleDriver implements Driver {
         "decimal",
         "integer",
         "int",
+        "bit",
         "smallint",
         "real",
         "double precision",
@@ -128,8 +130,12 @@ export class OracleDriver implements Driver {
         "nclob",
         "rowid",
         "urowid",
-        "simple-json",
-        "json",
+        // "simple-json",
+        // "json",
+	"text",
+	"tinyint",
+	"double",
+	"datetime"
     ]
 
     /**
@@ -301,8 +307,8 @@ export class OracleDriver implements Driver {
      * either create a pool and create connection when needed.
      */
     async connect(): Promise<void> {
-        this.oracle.fetchAsString = [this.oracle.DB_TYPE_CLOB]
-        this.oracle.fetchAsBuffer = [this.oracle.DB_TYPE_BLOB]
+        this.oracle.fetchAsString = [this.oracle.CLOB]
+        this.oracle.fetchAsBuffer = [this.oracle.BLOB]
         if (this.options.replication) {
             this.slaves = await Promise.all(
                 this.options.replication.slaves.map((slave) => {
@@ -622,7 +628,8 @@ export class OracleDriver implements Driver {
             return "number"
         } else if (
             column.type === "real" ||
-            column.type === "double precision"
+            column.type === "double precision" ||
+            column.type === "double"
         ) {
             return "float"
         } else if (column.type === String || column.type === "varchar") {
@@ -637,8 +644,8 @@ export class OracleDriver implements Driver {
             return "clob"
         } else if (column.type === "simple-json") {
             return "clob"
-        } else if (column.type === "json") {
-            return "json"
+        // } else if (column.type === "json") {
+        //     return "json"
         } else {
             return (column.type as string) || ""
         }
@@ -958,24 +965,28 @@ export class OracleDriver implements Driver {
             case "smallint":
             case "dec":
             case "decimal":
-                return this.oracle.DB_TYPE_NUMBER
+            case "tinyint":
+            case "double":
+                return this.oracle.NUMBER
             case "char":
             case "nchar":
             case "nvarchar2":
             case "varchar2":
-                return this.oracle.DB_TYPE_VARCHAR
+            case "text":
+                return this.oracle.STRING
             case "blob":
-                return this.oracle.DB_TYPE_BLOB
-            case "simple-json":
+                return this.oracle.BLOB
+            // case "simple-json":
             case "clob":
-                return this.oracle.DB_TYPE_CLOB
+                return this.oracle.CLOB
             case "date":
+            case "datetime":
             case "timestamp":
             case "timestamp with time zone":
             case "timestamp with local time zone":
-                return this.oracle.DB_TYPE_TIMESTAMP
-            case "json":
-                return this.oracle.DB_TYPE_JSON
+                return this.oracle.DATE
+            // case "json":
+            //     return this.oracle.DB_TYPE_JSON
         }
     }
 
@@ -988,10 +999,10 @@ export class OracleDriver implements Driver {
      */
     protected loadDependencies(): void {
         try {
-            const oracle = this.options.driver || PlatformTools.load("oracledb")
+            const oracle = this.options.driver || PlatformTools.load("dmdb")
             this.oracle = oracle
         } catch (e) {
-            throw new DriverPackageNotInstalledError("Oracle", "oracledb")
+            throw new DriverPackageNotInstalledError("Oracle", "dmdb")
         }
         const thickMode = this.options.thickMode
         if (thickMode) {
