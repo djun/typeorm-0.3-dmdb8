@@ -132,10 +132,15 @@ export class OracleDriver implements Driver {
         "urowid",
         // "simple-json",
         // "json",
-	"text",
-	"tinyint",
-	"double",
-	"datetime"
+        "text",
+        "long",
+        "longtext",
+        "image",
+        "smallint",
+        "tinyint",
+        "bigint",
+        "double",
+        "datetime"
     ]
 
     /**
@@ -617,15 +622,22 @@ export class OracleDriver implements Driver {
     }): string {
         if (
             column.type === Number ||
-            column.type === Boolean ||
-            column.type === "numeric" ||
-            column.type === "dec" ||
-            column.type === "decimal" ||
-            column.type === "int" ||
-            column.type === "integer" ||
-            column.type === "smallint"
+            column.type === Boolean
         ) {
             return "number"
+        } else if (
+            column.type === "numeric" ||
+            column.type === "dec" ||
+            column.type === "decimal"
+        ) {
+            return "numeric"
+        } else if (
+            column.type === "int" ||
+            column.type === "integer" ||
+            column.type === "smallint" ||
+            column.type === "tinyint"
+        ) {
+            return "integer"
         } else if (
             column.type === "real" ||
             column.type === "double precision" ||
@@ -640,6 +652,8 @@ export class OracleDriver implements Driver {
             return "blob"
         } else if (column.type === "uuid") {
             return "varchar2"
+        } else if (column.type === "longtext") {
+            return "clob"
         } else if (column.type === "simple-array") {
             return "clob"
         } else if (column.type === "simple-json") {
@@ -959,15 +973,22 @@ export class OracleDriver implements Driver {
     columnTypeToNativeParameter(type: ColumnType): any {
         switch (this.normalizeType({ type: type as any })) {
             case "number":
+                return this.oracle.NUMBER
             case "numeric":
+            case "dec":
+            case "decimal":
+                return this.oracle.NUMERIC
             case "int":
             case "integer":
             case "smallint":
-            case "dec":
-            case "decimal":
             case "tinyint":
+                return this.oracle.INTEGER
+            case "bigint":
+                return this.oracle.BIGINT
+            case "real":
+            case "double precision":
             case "double":
-                return this.oracle.NUMBER
+                return this.oracle.FLOAT
             case "char":
             case "nchar":
             case "nvarchar2":
@@ -975,9 +996,11 @@ export class OracleDriver implements Driver {
             case "text":
                 return this.oracle.STRING
             case "blob":
+            case "image":
                 return this.oracle.BLOB
             // case "simple-json":
             case "clob":
+            case "long":
                 return this.oracle.CLOB
             case "date":
             case "datetime":
